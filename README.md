@@ -1,3 +1,4 @@
 # alx-backend-python
---This is a an advanced pyton tutorials guide..
---Let's follow throught 
+--This is an advanced Python tutorial guide.
+
+--Let's follow through 
