@@ -31,7 +31,7 @@ def batch_processing(batch_size):
         for batch in batches:
             over_25_users = [user for user in batch if user['age']> 25]
             if over_25_users:
-                yield over_25_users
+                return over_25_users
     
     except Exception as e:
         print(f"Error: {e}")
