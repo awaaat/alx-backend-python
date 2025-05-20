@@ -1,0 +1,16 @@
+2025-05-21 00:33:27,471 - INFO - Success!! Made Connection to users_db.db Database
+2025-05-21 00:33:27,472 - ERROR - Error!! Failed to Make Connection to users_db.db Database
+2025-05-21 00:33:27,473 - INFO - Success!! Connection to the users_db.db Was Closed
+2025-05-21 00:38:25,548 - INFO - Success!! Made Connection to  Database users_db.db
+2025-05-21 00:38:25,548 - ERROR - Error!! Failed to Make Connection to Database users_db.db
+2025-05-21 00:38:25,550 - INFO - Success!! Connection to the Database Was Closed
+2025-05-21 00:45:24,808 - INFO - Success!! Made Connection to  Database users_db.db
+2025-05-21 00:45:24,809 - ERROR - Error!! Failed to Make Connection to Database users_db.db
+2025-05-21 00:45:24,810 - INFO - Success!! Connection to the Database Was Closed
+2025-05-21 00:46:48,690 - INFO - Success!! Made Connection to  Database users_db.db
+2025-05-21 00:46:48,691 - ERROR - Error!! Failed to Make Connection to Database users_db.db
+2025-05-21 00:46:48,692 - INFO - Success!! Connection to the Database Was Closed
+2025-05-21 00:47:05,508 - INFO - Success!! Made Connection to  Database users_db.db
+2025-05-21 00:47:05,517 - INFO - Success!! Connection to the Database Was Closed
+2025-05-21 00:47:55,872 - INFO - Success!! Made Connection to  Database users_db.db
+2025-05-21 00:47:55,876 - INFO - Success!! Connection to the Database Was Closed
