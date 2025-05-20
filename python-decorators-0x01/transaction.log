@@ -1,0 +1,16 @@
+2025-05-20 23:16:37,501 - INFO - Success! Transaction Committed
+2025-05-20 23:16:37,502 - INFO - Success! Opened database users_db.db
+2025-05-20 23:16:37,503 - INFO - Success! Closed database {db_name}
+2025-05-20 23:16:37,504 - INFO - Updated Successfully
+2025-05-20 23:20:11,560 - ERROR - Transaction Rolled Back. Error:  no such table: users
+2025-05-20 23:20:11,560 - ERROR - An error occured. Failed to connect to the database users_.db
+2025-05-20 23:20:11,562 - INFO - Success! Closed database users_.db
+2025-05-20 23:20:11,562 - ERROR - Error while updating: no such table: users
+2025-05-20 23:22:30,738 - INFO - Success! Transaction Committed
+2025-05-20 23:22:30,739 - INFO - Success! Opened database users_db.db
+2025-05-20 23:22:30,740 - INFO - Success! Closed database users_db.db
+2025-05-20 23:22:30,741 - INFO - Updated Successfully
+2025-05-20 23:24:12,520 - INFO - Success! Transaction Committed
+2025-05-20 23:24:12,520 - INFO - Success! Opened database users_db.db
+2025-05-20 23:24:12,522 - INFO - Success! Closed database users_db.db
+2025-05-20 23:24:12,522 - INFO - User updated Successfully
