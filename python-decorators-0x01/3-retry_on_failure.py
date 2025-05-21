@@ -54,7 +54,7 @@ def retry_on_failure(retries: int, delay: float, rule: Optional[Callable[[Except
                         
                         
 @with_db_connection
-@retry_on_failure(retries = 3, delay = 1)
+@retry_on_failure(retries = 3, delay = 1.2)
 def fetch_users_with_retry(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users LIMIT 10")
