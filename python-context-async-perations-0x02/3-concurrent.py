@@ -1,7 +1,6 @@
 import logging
 import aiosqlite
 import asyncio
-import sqlite3
 from typing import List, Tuple, Any
 
 logger = logging.getLogger("async_python")
@@ -10,7 +9,6 @@ file_handler = logging.FileHandler("async_db.log")
 file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
 logger.addHandler(file_handler)
 logger.addHandler(logging.StreamHandler())
-
 
 async def async_fetch_users(db_name: str, query:str):
     try:
@@ -23,6 +21,7 @@ async def async_fetch_users(db_name: str, query:str):
             return results
     except Exception as e:
         logger.error(f"Error while executing. {e}")
+
 async def async_fetch_older_users(db_name:str, query:str, parameter: Any):
     try:
         async with aiosqlite.connect(db_name) as conn:
