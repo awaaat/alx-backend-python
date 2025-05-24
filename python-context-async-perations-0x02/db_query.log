@@ -1,0 +1,24 @@
+2025-05-24 03:42:20,703 - ERROR - Failed to execute query. 'ExecuteQuery' object is not iterable
+2025-05-24 03:46:27,887 - INFO - Error While executing your query
+2025-05-24 03:46:27,887 - ERROR - Failed to execute query. 'NoneType' object is not iterable
+2025-05-24 03:48:28,574 - INFO - Error While executing your query
+2025-05-24 03:48:28,575 - ERROR - Failed to execute query. 'NoneType' object is not iterable
+2025-05-24 03:52:36,066 - INFO - Error While executing your query: no such column: age
+2025-05-24 03:52:36,068 - INFO - Success!! Closed Connection to the Database
+2025-05-24 03:52:36,069 - ERROR - Failed to execute query. 'NoneType' object is not iterable
+2025-05-24 03:54:29,991 - INFO - Error While executing your query: no such column: age
+2025-05-24 03:54:29,994 - INFO - Success!! Closed Connection to the Database
+2025-05-24 03:54:29,995 - ERROR - Failed to execute query. 'NoneType' object is not iterable
+2025-05-24 03:54:43,209 - INFO - Error While executing your query: Incorrect number of bindings supplied. The current statement uses 0, and there are 1 supplied.
+2025-05-24 03:54:43,211 - INFO - Success!! Closed Connection to the Database
+2025-05-24 03:54:43,211 - ERROR - Failed to execute query. 'NoneType' object is not iterable
+2025-05-24 03:55:45,083 - INFO - Success!! Query with Parameter executed.
+2025-05-24 03:55:45,088 - INFO - Success!! Closed Connection to the Database
+2025-05-24 03:57:04,895 - INFO - Success!! Query with Parameter executed.
+2025-05-24 03:57:04,897 - INFO - Success!! Closed Connection to the Database
+2025-05-24 03:57:56,600 - INFO - Success!! Query with Parameter executed.
+2025-05-24 03:57:56,603 - INFO - Success!! Closed Connection to the Database
+2025-05-24 14:48:46,091 - INFO - Success!! Query with Parameter executed.
+2025-05-24 14:48:46,094 - INFO - Success!! Closed Connection to the Database
+2025-05-24 15:04:53,462 - INFO - Success!! Query with Parameter executed.
+2025-05-24 15:04:53,464 - INFO - Success!! Closed Connection to the Database

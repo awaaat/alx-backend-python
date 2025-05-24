@@ -1,0 +1,5 @@
+2025-05-23 03:40:15,825 - INFO - Success!! Opened Connection to the Database users_db.db
+2025-05-23 03:40:15,828 - INFO - Success!! Closed Connection to the Database users_db.db
+2025-05-23 03:40:15,829 - ERROR - Error!! Failed to execute. no such table: user
+2025-05-23 03:40:41,572 - INFO - Success!! Opened Connection to the Database users_db.db
+2025-05-23 03:40:41,577 - INFO - Success!! Closed Connection to the Database users_db.db
