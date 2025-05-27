@@ -64,8 +64,8 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         cls.get_patcher = patch('requests.get')
         cls.mock_get = cls.get_patcher.start()
         cls.mock_get.side_effect = [
-            Mock(json=Mock(return_value=cls.org_payload)),
-            Mock(json=Mock(return_value=cls.repos_payload))
+            Mock(json=Mock(return_value=cls.org_payload)), # type: ignore
+            Mock(json=Mock(return_value=cls.repos_payload)) # type: ignore
         ]
 
     @classmethod
@@ -75,4 +75,4 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
     def test_public_repos(self):
         client = GithubOrgClient('test')
         result = client.public_repos()
-        self.assertEqual(result, self.expected_repos)
+        self.assertEqual(result, self.expected_repos) # type: ignore
