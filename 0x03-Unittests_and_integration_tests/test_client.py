@@ -13,12 +13,25 @@ class TestGithubOrgClient(unittest.TestCase):
     ])
     @patch('client.get_json')
     def test_org(self, name, organization_name, expected_data, mock_get_json):
+        """_summary_
+
+        Args:
+            name (_type_): _description_
+            organization_name (_type_): _description_
+            expected_data (_type_): _description_
+            mock_get_json (_type_): _description_
+        """
         mock_get_json.return_value = expected_data
         org_client = GithubOrgClient(organization_name)
         self.assertEqual(org_client.org, expected_data, f"The organization {organization_name} should provided expected results {expected_data}")
         mock_get_json.assert_called_once_with(f'https://api.github.com/orgs/{organization_name}')
     
     def test_public_repos_url(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         payload = {"repos_url": "https://example.com/example_org/repos"}
         with patch('client.GithubOrgClient.org', new_callable = PropertyMock) as mock_org:
             mock_org.return_value = payload
@@ -59,6 +72,11 @@ class TestGithubOrgClient(unittest.TestCase):
     'expected_repos': ['repo_1', 'repo_2']
 }])    
 class TestIntegrationGithubOrgClient(unittest.TestCase):
+    """_summary_
+
+    Args:
+        unittest (_type_): _description_
+    """
     @classmethod
     def setUpClass(cls):
         cls.get_patcher = patch('requests.get')
