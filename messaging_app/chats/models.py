@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.contrib.auth.models import AbstractUser
 import uuid
+from django.contrib.auth.hashers import make_password
 
 class User(AbstractUser):
     """Participant/User class
@@ -10,6 +11,10 @@ class User(AbstractUser):
         AbstractUser (_type_): _description_
     """
     user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(null=False, blank=False)
+    password = models.CharField(max_length=128)
+    first_name = models.CharField(max_length=100, null=False, blank=False)
+    last_name = models.CharField(max_length=100, null=False, blank=False)
     bio = models.TextField(blank=True, null=True)
     profile_image = models.ImageField(upload_to='profiles/', blank = True, null = True)
     
@@ -30,6 +35,11 @@ class User(AbstractUser):
         verbose_name='user permissions',
         related_query_name='user',
     )
+    def save(self, *args, **kwargs):
+        # Hash password only if it’s not already hashed
+        if self.password and not self.password.startswith('pbkdf2_'):
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
     
 class Conversation(models.Model):
 
@@ -46,10 +56,10 @@ class Messages(models.Model):
     message_id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
     conversation = models.ForeignKey(to = Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete= models.CASCADE, related_name='sent_messages')
-    timestamp = models.DateTimeField(auto_now_add=True)
-    content = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+    message_body = models.TextField()
     
     def __str__(self) -> str:
-        return f"Message from {self.sender.username} at {self.timestamp}"
+        return f"Message from {self.sender.username} at {self.sent_at}"
         
 
