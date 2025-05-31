@@ -12,9 +12,10 @@ class User(AbstractUser):
     """
     user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(null=False, blank=False)
-    password = models.CharField(max_length=128)
+    password = models.CharField(max_length=128, null=False, blank=False)
     first_name = models.CharField(max_length=100, null=False, blank=False)
     last_name = models.CharField(max_length=100, null=False, blank=False)
+    phone_number = models.CharField(max_length= 100, null=False, blank=False)
     bio = models.TextField(blank=True, null=True)
     profile_image = models.ImageField(upload_to='profiles/', blank = True, null = True)
     
