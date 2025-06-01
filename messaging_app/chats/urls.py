@@ -1,15 +1,15 @@
 from django.urls import path, include
 from .import views
-from rest_framework.routers import DefaultRouter
+from rest_framework import routers
 from rest_framework_nested.routers import NestedDefaultRouter # type: ignore
 
-router = DefaultRouter()
+router = routers.DefaultRouter()
 router.register(r'user', views.UserViewset)
 router.register(r'conversations', views.ConversationViewSet)
-router.register(r'messages', views.MessageViewset)
+router.register(r'messages', views.MessageViewSet)
 
 conversations_router = NestedDefaultRouter(router, r'conversations', lookup='conversation')
-conversations_router.register(r'messages', views.MessageViewset, basename='conversation-messages')
+conversations_router.register(r'messages', views.MessageViewSet, basename='conversation-messages')
 
 
 urlpatterns = [

@@ -53,7 +53,7 @@ class Conversation(models.Model):
         return f"Conversation {self.conversation_id} with {', '.join(user.username for user in self.participants.all())}" # type: ignore
 
 
-class Messages(models.Model):
+class Message(models.Model):
     message_id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
     conversation = models.ForeignKey(to = Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete= models.CASCADE, related_name='sent_messages')

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Conversation, Messages
+from .models import User, Conversation, Message
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,7 +18,7 @@ class MessageSerializer(serializers.ModelSerializer):
     sender_last_name = serializers.CharField(source = 'sender.last_name')
     
     class Meta:
-        model = Messages
+        model = Message
         fields = (
             'message_id',
             'conversation',
@@ -36,8 +36,8 @@ class ConversationSerializer(serializers.ModelSerializer):
     messages = serializers.SerializerMethodField()
     
     def get_message(self, obj):
-        messages = Messages.objects.filter(conversation = obj)
-        return MessageSerializer(messages, many = True).data
+        message = Message.objects.filter(conversation = obj)
+        return MessageSerializer(message, many = True).data
         
     class Meta:
         model = Conversation
