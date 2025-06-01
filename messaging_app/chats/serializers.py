@@ -33,7 +33,7 @@ class MessageSerializer(serializers.ModelSerializer):
         return value
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many = True, read_only = True)
-    messages = serializers.SerializerMethodField()
+    message = serializers.SerializerMethodField()
     
     def get_message(self, obj):
         message = Message.objects.filter(conversation = obj)
@@ -46,6 +46,6 @@ class ConversationSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'participants',
-            'messages',
+            'message',
         )
         
