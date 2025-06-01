@@ -19,17 +19,22 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Messages
         fields = (
+            'message_id',
             'conversation',
             'sender_first_name',
             'sender_last_name',
             'sent_at',
             'message_body',
-            'message_id',
             )
 
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many = True, read_only = True)
-    messages = MessageSerializer(many = True, read_only = True)
+    messages = serializers.SerializerMethodField(method_name='get_message')
+    
+    def get_message(self, obj):
+        messages = Messages.objects.filter(conversation = obj)
+        return MessageSerializer(messages, many = True).data
+        
     class Meta:
         model = Conversation
         fields = (
@@ -39,3 +44,4 @@ class ConversationSerializer(serializers.ModelSerializer):
             'participants',
             'messages',
         )
+        

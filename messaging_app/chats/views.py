@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import viewsets
 from .models import User, Messages, Conversation
-from .serializer import UserSerializer, MessageSerializer, ConversationSerializer
+from .serializers import UserSerializer, MessageSerializer, ConversationSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 
