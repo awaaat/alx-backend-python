@@ -33,7 +33,7 @@ class MessageSerializer(serializers.ModelSerializer):
         return value
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many = True, read_only = True)
-    messages = serializers.SerializerMethodField(method_name='get_message')
+    messages = serializers.SerializerMethodField()
     
     def get_message(self, obj):
         messages = Messages.objects.filter(conversation = obj)
