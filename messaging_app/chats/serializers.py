@@ -16,6 +16,7 @@ class MessageSerializer(serializers.ModelSerializer):
     conversation = serializers.CharField(source = 'conversation.conversation_id')
     sender_first_name = serializers.CharField(source = 'sender.first_name')
     sender_last_name = serializers.CharField(source = 'sender.last_name')
+    
     class Meta:
         model = Messages
         fields = (
@@ -26,7 +27,10 @@ class MessageSerializer(serializers.ModelSerializer):
             'sent_at',
             'message_body',
             )
-
+    def validate_message_body(self, value):
+        if not value.strip():
+            return serializers.ValidationError("Message Body Cannnot Be Empty")
+        return value
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many = True, read_only = True)
     messages = serializers.SerializerMethodField(method_name='get_message')
