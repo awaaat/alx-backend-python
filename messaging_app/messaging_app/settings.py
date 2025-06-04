@@ -1,6 +1,6 @@
 from pathlib import Path
 import environ # type: ignore
-
+from datetime import timedelta
 # Initialize environment variables
 env = environ.Env()
 environ.Env.read_env()  # reads .env file from BASE_DIR by default
@@ -27,10 +27,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'chats',
     'drf_yasg',
+    'rest_framework_simplejwt',
+    
 ]
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 }
 
@@ -108,3 +110,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME' :timedelta(minutes = 60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False, 
+    'BLACKLIST_AFTER_ROTATION': False,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
