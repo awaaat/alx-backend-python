@@ -4,20 +4,13 @@ from .models import User, Conversation, Message
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = (
-            'user_id',
-            'first_name',
-            'last_name',
-            'phone_number',
-            'profile_image',
-            'bio',
-            )
+        fields = '__all__'
 
 class MessageSerializer(serializers.ModelSerializer):
-    conversation = serializers.CharField(source = 'conversation.conversation_id')
-    sender_first_name = serializers.CharField(source = 'sender.first_name')
-    sender_last_name = serializers.CharField(source = 'sender.last_name')
-    
+    conversation = serializers.CharField(source='conversation.conversation_id')
+    sender_first_name = serializers.CharField(source='sender.first_name')
+    sender_last_name = serializers.CharField(source='sender.last_name')
+
     class Meta:
         model = Message
         fields = (
@@ -27,10 +20,11 @@ class MessageSerializer(serializers.ModelSerializer):
             'sender_last_name',
             'sent_at',
             'message_body',
-            )
+        )
+
     def validate_message_body(self, value):
         if not value.strip():
-            return serializers.ValidationError("Message Body Cannnot Be Empty")
+            raise serializers.ValidationError("Message Body Cannot Be Empty")
         return value
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many = True, read_only = True)
@@ -49,4 +43,5 @@ class ConversationSerializer(serializers.ModelSerializer):
             'participants',
             'message',
         )
+
         

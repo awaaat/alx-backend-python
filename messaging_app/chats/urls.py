@@ -13,7 +13,7 @@ conversations_router.register(r'messages', views.MessageViewSet, basename='conve
 
 user_router = NestedDefaultRouter(router, r'user', lookup = 'user')
 user_router.register(r'messages',  views.MessageViewSet, basename='user-messages')
-user_router.register(r'conversations',  views.MessageViewSet, basename='user-conversations')
+user_router.register(r'conversations',  views.ConversationViewSet, basename='user-conversations')
 
 urlpatterns = [
     path('', include(router.urls)),
