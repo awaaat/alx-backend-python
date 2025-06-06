@@ -1,12 +1,13 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
 from rest_framework import serializers
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from .models import User, Message, Conversation
 from .serializers import UserSerializer, MessageSerializer, ConversationSerializer
 from .permissions import IsParticipantOfConversation
 from .filters import MessageFilter
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from .pagination import MessagePagination  # Import custom pagination class
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
@@ -39,15 +40,16 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing messages in conversations.
     Allows participants to send, view, update, and delete messages.
-    Supports filtering by conversation and search/ordering by message content or sender.
+    Supports filtering by conversation, sender, or time range, with pagination (20 messages/page).
     """
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, filters.DjangoFilterBackend] # type: ignore
     search_fields = ['message_body', 'sender__first_name', 'sender__last_name']
     ordering_fields = ['sent_at']
     permission_classes = [IsParticipantOfConversation]
     filterset_class = MessageFilter
+    pagination_class = MessagePagination  # Enforce 20 messages per page
 
     def get_queryset(self):
         """
