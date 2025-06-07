@@ -1,5 +1,7 @@
-from rest_framework import permissions, BasePermission # type: ignore
+from rest_framework import permissions
 from .models import Conversation, Message
+from rest_framework.permissions import BasePermission
+
 
 class IsParticipantOfConversation(permissions.BasePermission):
     """
@@ -28,6 +30,7 @@ class IsParticipantOfConversation(permissions.BasePermission):
             conversation = obj
         elif  isinstance(obj, Message):
             message = obj
+            conversation = message.conversation 
         else:
             return False
         # Check if user is a participant in the conversation
@@ -43,4 +46,3 @@ class IsParticipantOfConversation(permissions.BasePermission):
         return is_participant
     
     
-        

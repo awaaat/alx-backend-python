@@ -8,6 +8,8 @@ from .serializers import UserSerializer, MessageSerializer, ConversationSerializ
 from .permissions import IsParticipantOfConversation
 from .filters import MessageFilter
 from .pagination import MessagePagination  # Import custom pagination class
+from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
@@ -42,36 +44,38 @@ class MessageViewSet(viewsets.ModelViewSet):
     Allows participants to send, view, update, and delete messages.
     Supports filtering by conversation, sender, or time range, with pagination (20 messages/page).
     """
-    queryset = Message.objects.all()
-    serializer_class = MessageSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter, filters.DjangoFilterBackend] # type: ignore
-    search_fields = ['message_body', 'sender__first_name', 'sender__last_name']
+    queryset = Message.objects.all().order_by('-sent_at')  
+    serializer_class = MessageSerializer  
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
+    search_fields = ['sender__first_name', 'sender__last_name']
     ordering_fields = ['sent_at']
     permission_classes = [IsParticipantOfConversation]
     filterset_class = MessageFilter
-    pagination_class = MessagePagination  # Enforce 20 messages per page
+    pagination_class = MessagePagination
+    lookup_field = 'message_id'
 
     def get_queryset(self):
-        """
-        Return messages for a specific conversation or all conversations the user participates in.
-        Filters by conversation_id (if provided) and user participation.
-        """
-        conversation_id = self.kwargs.get('conversation_pk')
+        conversation_id = self.kwargs.get('conversation_id')
+        user_id = self.kwargs.get('user_id')  
+
         if conversation_id:
             return Message.objects.filter(
                 conversation__conversation_id=conversation_id,
                 conversation__participants=self.request.user
-            )
-        return Message.objects.filter(conversation__participants=self.request.user)
+            ).order_by('-sent_at')
 
-    def perform_create(self, serializer):
-        """
-        Create a new message in the specified conversation.
-        Sets the sender as the authenticated user and links to the conversation.
-        """
-        conversation_id = self.kwargs.get('conversation_pk')
-        conversation = Conversation.objects.get(conversation_id=conversation_id)
-        serializer.save(sender=self.request.user, conversation=conversation)
+        if user_id:
+            return Message.objects.filter(
+                sender__user_id=user_id,
+                conversation__participants=self.request.user
+            ).order_by('-sent_at')
+
+        return Message.objects.filter(
+            conversation__participants=self.request.user
+    ).order_by('-sent_at')
+
+
+    
 
     def update(self, request, *args, **kwargs):
         """
