@@ -5,3 +5,4 @@
 2025-06-08 03:05:53,911 - User: kiplangatkip1007 - Method: GET - Path: /api/chats/conversations/ - Status: 200
 2025-06-08 03:14:36,109 - User: kiplangatkip1007 - Method: GET - Path: /api/chats/conversations/ - Status: 200
 2025-06-08 03:14:42,160 - User: kiplangatkip1007 - Method: GET - Path: /api/users/ - Status: 200
+2025-06-08 03:38:02,201 - User: Anonymous - Method: GET - Path: /api/users/ - Status: 500
