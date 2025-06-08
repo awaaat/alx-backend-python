@@ -15,7 +15,6 @@ conversations_router.register(r'messages', views.MessageViewSet, basename='conve
 
 # Nested router for user-specific messages and conversations
 user_router = NestedDefaultRouter(router, r'users', lookup='user')
-user_router.register(r'messages', views.MessageViewSet, basename='user-messages')
 user_router.register(r'conversations', views.ConversationViewSet, basename='user-conversations')
 
 # Consolidated urlpatterns

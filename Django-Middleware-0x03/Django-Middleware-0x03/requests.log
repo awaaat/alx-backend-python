@@ -1,0 +1,7 @@
+2025-06-08 03:04:27,312 - User: kiplangatkip1007 - Method: GET - Path: /api/chats/ - Status: 200
+2025-06-08 03:04:36,330 - User: kiplangatkip1007 - Method: GET - Path: /api/chats/conversation - Status: 404
+2025-06-08 03:04:43,490 - User: kiplangatkip1007 - Method: GET - Path: /api/chats/conversations/ - Status: 200
+2025-06-08 03:05:46,634 - User: kiplangatkip1007 - Method: GET - Path: /api/chats/conversations/ - Status: 200
+2025-06-08 03:05:53,911 - User: kiplangatkip1007 - Method: GET - Path: /api/chats/conversations/ - Status: 200
+2025-06-08 03:14:36,109 - User: kiplangatkip1007 - Method: GET - Path: /api/chats/conversations/ - Status: 200
+2025-06-08 03:14:42,160 - User: kiplangatkip1007 - Method: GET - Path: /api/users/ - Status: 200
