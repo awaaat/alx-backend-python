@@ -57,7 +57,7 @@ class RequestLoggingMiddleware:
         """
         self.get_response = get_response
         self.jwt_auth = JWTAuthentication()
-        self.api_pattern = re.compile(r'^/api/(chats/|users/)')  # Regex to filter relevant API endpoints
+        self.api_pattern = re.compile(r'^/api/chats/')  # Regex to filter relevant API endpoints
         
         
     def __call__(self, request: HttpRequest) -> HttpResponse:

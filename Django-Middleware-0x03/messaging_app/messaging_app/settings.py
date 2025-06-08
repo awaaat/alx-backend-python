@@ -42,22 +42,8 @@ MIDDLEWARE = [
       'django.contrib.auth.middleware.AuthenticationMiddleware',
       'django.contrib.messages.middleware.MessageMiddleware',
       'django.middleware.clickjacking.XFrameOptionsMiddleware',
-      #Added Middlewares
       'chats.middleware.RequestLoggingMiddleware',
-      #'chats.middleware.RestrictAccessByTimeMiddleware',
-      #'chats.middleware.MessageRateLimitMiddleware',
-      #'chats.middleware.RolePermissionMiddleware',
   ]
-
-CACHES = {
-    'default': {
-    'BACKEND': 'django_redis.cache.RedisCache',
-    'LOCATION': 'redis ://127.0.0.1:6379/1',
-    'OPTIONS': {
-        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-      }
-}
-}
 
 ROOT_URLCONF = 'messaging_app.urls'
 
@@ -118,7 +104,6 @@ REST_FRAMEWORK = {
       ],
       'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
       'PAGE_SIZE': 20,  # 20 messages per page globally
-      'EXCEPTION_HANDLER': 'chats.exceptions.custom_exception_handler',
 }
 
 LANGUAGE_CODE = 'en-us'
