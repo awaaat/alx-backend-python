@@ -42,6 +42,7 @@ MIDDLEWARE = [
       'django.contrib.auth.middleware.AuthenticationMiddleware',
       'django.contrib.messages.middleware.MessageMiddleware',
       'django.middleware.clickjacking.XFrameOptionsMiddleware',
+      
       'chats.middleware.RequestLoggingMiddleware',
   ]
 
@@ -137,3 +138,13 @@ CORS_ALLOW_CREDENTIALS = True  # Allow credentials (like tokens)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',  # no space after 'redis'
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
