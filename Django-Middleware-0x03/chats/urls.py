@@ -12,6 +12,7 @@ router.register(r'messages', views.MessageViewSet, basename='message')
 # Nested router for conversation-specific messages
 conversations_router = NestedDefaultRouter(router, r'conversations', lookup='conversation')
 conversations_router.register(r'messages', views.MessageViewSet, basename='conversation-messages')
+conversations_router.register(r'users', views.UserViewSet, basename='conversation-participant')
 
 # Nested router for user-specific messages and conversations
 user_router = NestedDefaultRouter(router, r'users', lookup='user')

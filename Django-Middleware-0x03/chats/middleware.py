@@ -7,7 +7,10 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 from typing import Callable
 from datetime import datetime
+from django.core.cache import cache
+import logging
 
+logger = logging.getLogger(__name__)
 
 
 # Set up a logger named "api-requests"
@@ -23,11 +26,8 @@ file_handler = logging.handlers.RotatingFileHandler(
     maxBytes=10 * 1024 * 1024, 
     backupCount=5
 )
-
 # Define log message format to include timestamp, user, HTTP method, path, and status code
-formatter = logging.Formatter(
-    '%(asctime)s - User: %(user)s - Method: %(method)s - Path: %(path)s - Status: %(status)s'
-)
+formatter = logging.Formatter('%(asctime)s - Method: %(method)s - Path: %(path)s - Status: %(status)s - User: %(user)s - Payload: %(payload)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
@@ -212,7 +212,7 @@ class OffensiveLanguageMiddleware:
 
         # This regex matches valid POST targets like:
         # /api/chats/conversations/123e4567-e89b-12d3-a456-426614174000/messages/
-        self.api_patterns = re.compile(r'^/api/chats/conversations/messages/$')
+        self.api_patterns = re.compile(r'^/api/chats/conversations/[0-9a-fA-F-]+/messages/$')
 
         # Offensive words pattern (case-insensitive)
         self.offensive_words = re.compile(
@@ -271,4 +271,130 @@ class OffensiveLanguageMiddleware:
         # If all checks pass, continue to the next middleware/view
         return self.get_response(request)
 
-        
+import re
+from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+class RolePermissionMiddleware:
+    """
+    Middleware to restrict DELETE operations on conversations and messages
+    to users with 'admin' or 'moderator' group membership.
+
+    The middleware checks the request path to ensure it matches API endpoints
+    related to conversations and messages, and intercepts DELETE requests only.
+
+    It extracts the JWT token from the Authorization header, validates it,
+    and checks if the user belongs to an allowed group before allowing the
+    request to proceed.
+
+    If the user is unauthorized or token is missing/invalid, it returns
+    an HTTP 403 Forbidden response.
+    """
+
+    def __init__(self, get_response) -> None:
+        """
+        Initialize the middleware with the get_response callable.
+
+        Args:
+            get_response (callable): The next middleware or view to be called.
+        """
+        self.get_response = get_response
+        self.jwt_auth = JWTAuthentication()
+        # Regex pattern to match /api/chats/conversations and nested messages endpoints
+        self.api_pattern = re.compile(
+            r'^/api/chats/conversations(?:/.+)?(?:/messages(?:/.+)?)?/?$'
+        )
+
+    def __call__(self, request: HttpRequest) -> HttpResponse:
+        if request.method != 'DELETE' or not self.api_pattern.match(request.path):
+            return self.get_response(request)
+
+        try:
+            token = request.META.get('HTTP_AUTHORIZATION', '').replace('Bearer ', '').strip()
+            validated_token = self.jwt_auth.get_validated_token(token)
+            user = self.jwt_auth.get_user(validated_token)
+
+            if not user.groups.filter(name__in=['admin', 'moderator']).exists():
+                logger.error(f"Blocked request: {json.dumps({'Error': 'You do not have the permission to perform this action'})}")
+                return HttpResponseForbidden(json.dumps({"Error": "You do not have the permission to perform this action"}), 
+                                                    content_type="application/json")
+        except Exception:
+            logger.error(f"Blocked request: {json.dumps({'error': 'Authentication required'})}")
+            return HttpResponseForbidden(json.dumps({"error": "Authentication required"}), 
+                                        content_type="application/json")
+        return self.get_response(request)
+class RateLimitingMiddleware:
+    """
+    This middleware class Limits users to a maximum number of messages per minute for POSTs to /api/chats/conversations/<id>/messages/.
+    The reason is to prevent abuse and ensures fair usage of the messaging API.
+    It Uses Redis to track message counts per user within a 1-minute sliding window.
+    It also restricts POST requests to /api/chats/conversations/<id>/messages/, returning JSON 429 errors if limit exceeded.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.jwt_auth = JWTAuthentication()
+        self.api_pattern = re.compile(r'^/api/chats/conversations/[0-9a-f-]+/messages/$')
+        self.rate_limit = 10  # Max messages per minute
+        self.window_seconds = 60  # 1-minute window
+
+    def __call__(self, request):
+        # Skip non-POST requests or non-matching paths
+        if request.method != 'POST' or not self.api_pattern.match(request.path):
+            return self.get_response(request)
+
+        # Extract user from JWT token
+        user = 'Anonymous'
+        try:
+            token = request.META.get('HTTP_AUTHORIZATION', '').replace('Bearer ', '')
+            validated_token = self.jwt_auth.get_validated_token(token)
+            user_obj = self.jwt_auth.get_user(validated_token)
+            user = user_obj.username
+        except Exception:
+            return HttpResponseForbidden(
+                {"error": "Authentication required"},
+                content_type="application/json"
+            )
+
+        # Generate Redis key for user-specific rate limiting
+        cache_key = f"rate_limit:{user}:{request.path}"
+        current_count = cache.get(cache_key, 0)
+
+        # Check rate limit
+        if current_count >= self.rate_limit:
+            logger.warning('', extra={
+                'user': user,
+                'path': request.path,
+                'status': 'Rate limit exceeded'
+            })
+            return HttpResponse(
+                {"error": f"Rate limit exceeded: {self.rate_limit} messages per minute"},
+                status=429,
+                content_type="application/json"
+            )
+
+        # Increment count and set expiry for sliding window
+        try:
+            if current_count == 0:
+                cache.set(cache_key, 1, timeout=self.window_seconds)
+            else:
+                cache.incr(cache_key)
+        except Exception as e:
+            logger.error('', extra={
+                'user': user,
+                'path': request.path,
+                'status': f'Cache error: {str(e)}'
+            })
+            return HttpResponse(
+                {"error": "Internal server error"},
+                status=500,
+                content_type="application/json"
+            )
+
+        # Log successful request
+        logger.info('', extra={
+            'user': user,
+            'path': request.path,
+            'status': 'Request allowed'
+        })
+
+        return self.get_response(request)

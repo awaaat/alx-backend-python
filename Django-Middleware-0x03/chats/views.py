@@ -22,11 +22,14 @@ class ConversationViewSet(viewsets.ModelViewSet):
     search_fields = ['participants__first_name', 'participants__last_name']
     ordering_fields = ['updated_at']
     permission_classes = [IsParticipantOfConversation]
-
+    
     def get_queryset(self):
         """
         Return conversations where the authenticated user is a participant.
         """
+        user_id = self.kwargs.get('user_pk')  # CORRECTED for nested URL
+        if user_id:
+            return self.queryset.filter(participants__user_id=user_id)
         return self.queryset.filter(participants=self.request.user)
 
     def create(self, request, *args, **kwargs):
@@ -55,8 +58,8 @@ class MessageViewSet(viewsets.ModelViewSet):
     lookup_field = 'message_id'
 
     def get_queryset(self):
-        conversation_id = self.kwargs.get('conversation_id')
-        user_id = self.kwargs.get('user_id')  
+        conversation_id = self.kwargs.get('conversation_pk')
+        user_id = self.kwargs.get('user_pk')  
 
         if conversation_id:
             return Message.objects.filter(

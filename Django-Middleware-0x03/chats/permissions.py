@@ -34,7 +34,7 @@ class IsParticipantOfConversation(permissions.BasePermission):
         else:
             return False
         # Check if user is a participant in the conversation
-        is_participant = conversation.participants.filter(id = request.user.id).exists()
+        is_participant = conversation.participants.filter(user_id = request.user.user_id).exists()
         # Allow safe methods (GET, HEAD, OPTIONS) for participants
         if request.method in permissions.SAFE_METHODS:
             return is_participant
