@@ -275,7 +275,7 @@ import re
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-class RolePermissionMiddleware:
+class RolepermissionMiddleware:
     """
     Middleware to restrict DELETE operations on conversations and messages
     to users with 'admin' or 'moderator' group membership.
