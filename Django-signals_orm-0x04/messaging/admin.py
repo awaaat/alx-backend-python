@@ -12,7 +12,7 @@ class MessageAdmin(admin.ModelAdmin):
     """
     
     # Controls which fields show up in the admin list view
-    list_display = ['sender', 'recipient', 'content_preview', 'timestamp']
+    list_display = ['sender', 'receiver', 'content_preview', 'timestamp']
     
     # Adds filters in the sidebar to narrow messages by time or read status
     list_filter = ['timestamp', 'is_read']

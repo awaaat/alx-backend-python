@@ -28,6 +28,6 @@ class NotificationService:
         and a new notification entry is added for the recipient.
         """
         return Notification.objects.create(
-            user= message.recipient,  # Who should get notified
+            user= message.receiver,  # Who should get notified
             message = message          # What the notification is about
         )

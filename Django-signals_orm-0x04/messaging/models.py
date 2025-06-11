@@ -9,7 +9,7 @@ class MessageQuerySet(models.QuerySet):
         Returns all messages where the user is either the sender or recipient.
         In a real chat app, this lets you quickly load all conversations a user is part of.
         """
-        return self.filter(models.Q(sender=user) | models.Q(recipient=user))
+        return self.filter(models.Q(sender=user) | models.Q(receiver=user))
 
     def unread(self):
         """
@@ -35,7 +35,7 @@ class Message(models.Model):
         )
 
     # The user receiving the message.
-    recipient = models.ForeignKey(
+    receiver = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='received_messages',
@@ -83,7 +83,7 @@ class Message(models.Model):
         ordering = ['timestamp']  # Newer messages appear after older ones.
 
         indexes = [
-            models.Index(fields=['sender', 'recipient', 'timestamp']),
+            models.Index(fields=['sender', 'receiver', 'timestamp']),
             # Example: speeds up looking for all messages between two users over time.
         ]
 
