@@ -14,6 +14,6 @@ def message_history_view(request, message_id):
     
 def delete_user_view(request):
     if request.method == 'POST':
-        request.user.delete
+        request.user.delete()
         return redirect('home')
     return render(request, 'messaging/delete_account.html')
