@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Message, Notification
+from .models import Message, Notification, MessageHistory
 from .services import NotificationService, LogMessageHistoryService
-from django . db . models . signals import pre_save
+from django.db.models.signals import pre_save
 
 
 
@@ -39,7 +39,7 @@ def handle_new_notifications(sender, instance, created, **kwargs):
         )
 
 @receiver(post_save, sender=Message)
-def handle_message_deletion(sender, instance, **kwargs):
+def handle_message_edits(sender, instance, **kwargs):
     """
     Checks if a message was edited after it was first created.
     
@@ -67,6 +67,7 @@ def handle_message_deletion(sender, instance, **kwargs):
     """
     
     # Check if the message instance has a primary key (i.e., already exists in the database).
+    #We can use teh service layer of just bypass it 
     if instance.pk:
         try:
             # Retrieve the version of the message from before this save operation.
@@ -86,5 +87,19 @@ def handle_message_deletion(sender, instance, **kwargs):
             # This could happen if the message was just created and not found in DB yet.
             # In that case, we do nothing.
             pass
-
-            
+    
+    if isinstance.pk:
+        try:
+            old_message = Message.objects.get(pk = instance.pk)
+            if old_message.message_content != instance.message_content:
+                MessageHistory.objects.create(
+                    message = instance,
+                    old_content = old_message.message_content, 
+                    edited_by = instance.sender
+                )
+                instance.edited = True
+                instance.save(update_fields=["edited"])
+        except Message.DoesNotExist:
+            # This could happen if the message was just created and not found in DB yet.
+            # In that case, we do nothing.
+            pass 

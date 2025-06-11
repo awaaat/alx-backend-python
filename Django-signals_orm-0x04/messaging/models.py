@@ -132,7 +132,7 @@ class MessageHistory(models.Model):
                                 related_name='message_history')
     old_content = models.TextField(max_length= 250)
     edited_at = models.DateTimeField(default=timezone.now, db_index= True)
-    
+    edited_by = models.ForeignKey(User, on_delete= models.CASCADE)
     class Meta:
         ordering = ['-edited_at']
         indexes = [models.Index(fields=['message', 'edited_at'])]
