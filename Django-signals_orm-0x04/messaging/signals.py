@@ -1,9 +1,7 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from .models import Message, Notification, MessageHistory
-from .services import NotificationService, LogMessageHistoryService
-from django.db.models.signals import pre_save
-
+from .models import *
+from .services import *
 
 
 @receiver(post_save, sender=Message)
@@ -68,6 +66,7 @@ def handle_message_edits(sender, instance, **kwargs):
     
     # Check if the message instance has a primary key (i.e., already exists in the database).
     #We can use teh service layer of just bypass it 
+    """
     if instance.pk:
         try:
             # Retrieve the version of the message from before this save operation.
@@ -87,8 +86,8 @@ def handle_message_edits(sender, instance, **kwargs):
             # This could happen if the message was just created and not found in DB yet.
             # In that case, we do nothing.
             pass
-    
-    if isinstance.pk:
+    """
+    if instance.pk:
         try:
             old_message = Message.objects.get(pk = instance.pk)
             if old_message.message_content != instance.message_content:
@@ -103,3 +102,27 @@ def handle_message_edits(sender, instance, **kwargs):
             # This could happen if the message was just created and not found in DB yet.
             # In that case, we do nothing.
             pass 
+
+##For this, we can also use a service layer or bypass it. 
+
+#Option 1 for using service layer
+""" 
+@receiver(post_delete, sender = User)       
+def handle_user_deletion(sender, instance, **kwargs):
+    try:
+        UserCleanUpService.clean_user_data(instance)
+    except Exception:
+        pass
+"""
+## Option 2, by-passing it
+
+@receiver(post_delete,sender = User)
+def delete_user_date(sender, instance, **kwargs):
+    try:
+        Message.objects.filter(sender = instance).delete()
+        Message.objects.filter(receiver = instance).delete()
+        Notification.objects.filter(user = instance).delete()
+        MessageHistory.objects.filter(instance.receiver).delete()
+        MessageHistory.objects.filter(edited_by = instance).delete()
+    except Exception:
+        pass

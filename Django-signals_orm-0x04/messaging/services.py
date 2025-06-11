@@ -1,6 +1,6 @@
 from django.db import transaction
 from .models import Notification, MessageHistory
-
+from.models import *
 class NotificationService:
     """
     Handles the creation of user notifications.
@@ -39,3 +39,19 @@ class LogMessageHistoryService:
             message = message, 
             old_content = old_content
         )
+        
+class UserCleanUpService:
+    @staticmethod
+    @transaction.atomic
+    def clean_user_data(user):
+        """ 
+        We delete * about the user
+        """ 
+        Message.objects.filter(sender = user).delete()
+        Message.objects.filter(receiver = user).delete()
+        Notification.objects.filter(user = user).delete()
+        MessageHistory.objects.filter(message__sender = user).delete()
+        MessageHistory.objects.filter(message__receiver = user).delete()
+        
+        
+    

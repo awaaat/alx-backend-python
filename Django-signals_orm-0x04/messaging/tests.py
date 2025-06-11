@@ -1,6 +1,7 @@
 from django.test import TestCase
 from .models import User, Message, Notification, MessageHistory
 from django.urls import reverse
+from .services import *
 
 class NotificationSignalTests(TestCase):
     """
@@ -84,3 +85,41 @@ class MessageHistoryViewTest(TestCase):
 
         # Ensure the old content is visible in the response HTML
         self.assertContains(response, "First original Version")
+
+class UserCleanUpServiceTest(TestCase):
+
+    def setUp(self):
+        # Create users
+        self.user = User.objects.create_user(username='user1', password='pass')
+        self.other_user = User.objects.create_user(username='user2', password='pass')
+
+        # Create messages
+        self.sent_msg = Message.objects.create(sender=self.user, receiver=self.other_user, message_content='Hi')
+        self.received_msg = Message.objects.create(sender=self.other_user, receiver=self.user, message_content='Hello')
+
+        # Create notifications
+        self.notification = Notification.objects.create(user=self.user, 
+                                                        message=self.sent_msg)
+
+        # Create message histories
+        self.history_sent = MessageHistory.objects.create(message=self.sent_msg, 
+                                                        old_content='Old Hi', 
+                                                        edited_by=self.user)
+        self.history_received = MessageHistory.objects.create(message=self.received_msg,
+                                                            old_content='Old Hello', 
+                                                            edited_by=self.other_user)
+
+    def test_clean_user_data_deletes_related_objects(self):
+        # Run the cleanup
+        UserCleanUpService.clean_user_data(self.user)
+
+        # Assert Messages sent or received by user are deleted
+        self.assertFalse(Message.objects.filter(sender=self.user).exists())
+        self.assertFalse(Message.objects.filter(receiver=self.user).exists())
+
+        # Assert Notifications for user are deleted
+        self.assertFalse(Notification.objects.filter(user=self.user).exists())
+
+        # Assert MessageHistory where message sender or receiver is the user are deleted
+        self.assertFalse(MessageHistory.objects.filter(message__sender=self.user).exists())
+        self.assertFalse(MessageHistory.objects.filter(message__receiver=self.user).exists())
