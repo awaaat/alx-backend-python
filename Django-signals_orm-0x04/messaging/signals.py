@@ -116,13 +116,30 @@ def handle_user_deletion(sender, instance, **kwargs):
 """
 ## Option 2, by-passing it
 
-@receiver(post_delete,sender = User)
-def delete_user_date(sender, instance, **kwargs):
+@receiver(post_delete, sender=User)
+def delete_user_data(sender, instance, **kwargs):
+    """
+    Deletes all related data when a User is removed:
+    - Messages sent or received by the user
+    - Notifications addressed to the user
+    - Message history entries for messages sent by the user
+    - Message history entries edited by the user
+    """
     try:
-        Message.objects.filter(sender = instance).delete()
-        Message.objects.filter(receiver = instance).delete()
-        Notification.objects.filter(user = instance).delete()
-        MessageHistory.objects.filter(instance.receiver).delete()
-        MessageHistory.objects.filter(edited_by = instance).delete()
+        # Delete messages where the user is the sender
+        Message.objects.filter(sender=instance).delete()
+
+        # Delete messages where the user is the receiver
+        Message.objects.filter(receiver=instance).delete()
+
+        # Delete notifications related to the user
+        Notification.objects.filter(user=instance).delete()
+
+        # Delete message history where the message was sent by the user
+        MessageHistory.objects.filter(message__sender=instance).delete()
+
+        # Delete message history entries that were edited by the user
+        MessageHistory.objects.filter(edited_by=instance).delete()
     except Exception:
         pass
+

@@ -123,3 +123,53 @@ class UserCleanUpServiceTest(TestCase):
         # Assert MessageHistory where message sender or receiver is the user are deleted
         self.assertFalse(MessageHistory.objects.filter(message__sender=self.user).exists())
         self.assertFalse(MessageHistory.objects.filter(message__receiver=self.user).exists())
+        
+class ThreadedConversationTests(TestCase):
+    def setUp(self):
+        # Create two users
+        self.user1 = User.objects.create_user(username='alice', password='testpass')
+        self.user2 = User.objects.create_user(username='bob', password='testpass')
+
+        # Main message
+        self.main_message = Message.objects.create(
+            sender=self.user1,
+            receiver=self.user2,
+            message_content="Hello Bob!"
+        )
+
+        # First reply
+        self.reply1 = Message.objects.create(
+            sender=self.user2,
+            receiver=self.user1,
+            message_content="Hi Alice!",
+            parent_message=self.main_message
+        )
+
+        # Second reply (to the reply)
+        self.reply2 = Message.objects.create(
+            sender=self.user1,
+            receiver=self.user2,
+            message_content="How are you?",
+            parent_message=self.reply1
+        )
+
+    def test_threading_structure(self):
+        # Ensure the main message has one direct reply
+        self.assertEqual(self.main_message.replies.count(), 1) # type: ignore
+        self.assertIn(self.reply1, self.main_message.replies.all()) # type: ignore
+
+        # Check that the first reply has a nested reply
+        self.assertEqual(self.reply1.replies.count(), 1) # type: ignore
+        self.assertIn(self.reply2, self.reply1.replies.all()) # type: ignore
+
+    def test_message_content_integrity(self):
+        self.assertEqual(self.main_message.message_content, "Hello Bob!")
+        self.assertEqual(self.reply1.parent_message, self.main_message)
+        self.assertEqual(self.reply2.parent_message, self.reply1)
+
+    def test_queryset_for_user(self):
+        user1_msgs = Message.objects.for_user(self.user1) # type: ignore
+        user2_msgs = Message.objects.for_user(self.user2) # type: ignore
+
+        self.assertEqual(user1_msgs.count(), 3)
+        self.assertEqual(user2_msgs.count(), 3)
