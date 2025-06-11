@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Message
+from .models import Message, Notification
 from .services import NotificationService
 
 @receiver(post_save, sender=Message)
@@ -22,5 +22,15 @@ def handle_new_notifications(sender, instance, created, **kwargs):
     - Keeps the logic separate and reusable by delegating work to `NotificationService`.
     - It’s fail-safe: only runs if a new message is actually created (not when edited).
     """
-    if created:
+    
+    """if created:
         NotificationService.create_notification(message=instance)
+    if not created:
+        Notification.objects.create()
+    """
+
+    if created:
+        Notification.objects.create(
+            user=instance.receiver,
+            message=instance
+        )
