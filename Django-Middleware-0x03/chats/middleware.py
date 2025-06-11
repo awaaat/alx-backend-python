@@ -169,7 +169,8 @@ class RestrictAccessByTimeMiddleware:
 
         # Define the allowed window as between 18 (6 PM) and 21 (9 PM), UTC time
         # The condition checks if the current hour is *outside* that range
-        if not (00 <= current_hour < 21):
+        """
+        if not (00 <= current_hour < 10):
             # If the current time is not within the allowed range, block access
             # Return a 403 Forbidden response with a JSON body explaining the restriction
             return HttpResponseForbidden(
@@ -178,7 +179,7 @@ class RestrictAccessByTimeMiddleware:
                 }),
                 content_type='application/json'
             )
-
+        """
         # If the request passed the time check, continue processing normally
         return self.get_response(request)
 
