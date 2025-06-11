@@ -1,5 +1,5 @@
 from django.db import transaction
-from .models import Notification
+from .models import Notification, MessageHistory
 
 class NotificationService:
     """
@@ -30,4 +30,12 @@ class NotificationService:
         return Notification.objects.create(
             user= message.receiver,  # Who should get notified
             message = message          # What the notification is about
+        )
+class LogMessageHistoryService:
+    @staticmethod
+    @transaction.atomic
+    def log_edits(message, old_content):
+        MessageHistory.objects.create(
+            message = message, 
+            old_content = old_content
         )

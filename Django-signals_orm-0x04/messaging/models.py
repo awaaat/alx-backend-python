@@ -25,8 +25,6 @@ class Message(models.Model):
     This includes features like tracking if the message is read,
     if it has been edited, and allowing replies (threading).
     """
-
-    # The user who sent the message.
     sender = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -125,3 +123,16 @@ class Notification(models.Model):
             models.Index(fields=['user', 'created_at']),
             # Helps quickly retrieve recent notifications for a user.
         ]
+
+
+class MessageHistory(models.Model):
+    """ Stores historical versions of edited messages . """
+    message = models.ForeignKey(Message, 
+                                on_delete= models.CASCADE, 
+                                related_name='message_history')
+    old_content = models.TextField(max_length= 250)
+    edited_at = models.DateTimeField(default=timezone.now, db_index= True)
+    
+    class Meta:
+        ordering = ['-edited_at']
+        indexes = [models.Index(fields=['message', 'edited_at'])]
