@@ -1,145 +1,215 @@
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-from .models import *
-from .services import *
+from django.db import models
+from django.contrib.auth.models import AbstractUser, Group, Permission
+from django.contrib.auth.hashers import make_password
+import uuid
+from django.utils import timezone
+from .managers import UnreadMessagesManager
 
+class MessageQuerySet(models.QuerySet):
+    """Custom queryset methods for filtering messages."""
+    def for_user(self, user):
+        """
+        Returns all messages where the user is the sender or receiver.
+        """
+        return self.filter(models.Q(sender=user) | models.Q(receiver=user))
+    def unread(self):
+        """
+        Returns all unread messages.
+        """
+        return self.filter(read=False)
 
-@receiver(post_save, sender=Message)
-def handle_new_notifications(sender, instance, created, **kwargs):
+class User(AbstractUser):
     """
-    Automatically creates a user notification whenever a new message is saved.
-
-    What's happening here:
-    - Django's `post_save` signal watches for new `Message` instances.
-    - When someone sends a message (i.e., a Message is created), this function runs.
-    - It uses the NotificationService to log a notification for the message's recipient.
-
-    Real-world example:
-    Imagine a chat app. When Alice sends Bob a message,
-    this function makes sure Bob gets a "You have a new message!" alert.
-
-    Why this is useful:
-    - It's automatic — you don’t have to manually create notifications every time.
-    - Keeps the logic separate and reusable by delegating work to `NotificationService`.
-    - It’s fail-safe: only runs if a new message is actually created (not when edited).
+    Custom user model that extends Django's built-in AbstractUser.
+    Adds extra fields like phone_number, bio, and profile_image, with UUID as primary key.
     """
-    
-    """if created:
-        NotificationService.create_notification(message=instance)
-    if not created:
-        Notification.objects.create()
+    user_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )  # Unique identifier instead of default integer ID
+
+    email = models.EmailField(null=False, blank=False)
+    first_name = models.CharField(max_length=100, null=False, blank=False)
+    last_name = models.CharField(max_length=100, null=False, blank=False)
+    phone_number = models.CharField(max_length=100, null=False, blank=False)
+    bio = models.TextField(blank=True, null=True)
+    profile_image = models.ImageField(
+        upload_to='profiles/',
+        blank=True,
+        null=True
+    )  # User profile picture, optional
+
+    groups = models.ManyToManyField(
+        Group,
+        related_name='custom_users',
+        blank=True,
+        help_text='The groups this user belongs to.',
+        verbose_name='groups',
+        related_query_name='user',
+    )
+
+    user_permissions = models.ManyToManyField(
+        Permission,
+        related_name='custom_users_permissions',
+        blank=True,
+        help_text='Specific permissions for this user.',
+        verbose_name='user permissions',
+        related_query_name='user',
+    )
+
+    def save(self, *args, **kwargs):
+        """
+        Override the default save method to hash the user's password only when created.
+        """
+        if self._state.adding and self.password:
+            self.set_password(self.password)  # Securely hash password
+        super().save(*args, **kwargs)
+
+class Conversation(models.Model):
     """
-
-    if created:
-        Notification.objects.create(
-            user=instance.receiver,
-            message=instance
-        )
-
-@receiver(post_save, sender=Message)
-def handle_message_edits(sender, instance, **kwargs):
+    Represents a group chat or private chat between multiple users.
+    Each conversation has a unique ID, timestamps, and participants.
     """
-    Checks if a message was edited after it was first created.
-    
-    Purpose:
-    - This function listens for changes to any `Message` object.
-    - If someone changes the content of an existing message (edits it),
-    the system should keep a history of what the message said before the edit.
-    
-    How it works:
-    - Django calls this function *after* any Message is saved (whether it’s new or edited).
-    - The function tries to find the *old version* of the message in the database.
-    - It compares the old message content to the new one.
-    - If the content has changed, it saves the old content to a separate history log
-    and marks the message as “edited.”
-    
-    Real-world example:
-    - Imagine a user in a chat app sends “Hi”.
-    - Then they change it to “Hello”.
-    - This function detects that change, logs the original “Hi” in the history,
-    and sets a flag saying the message was edited.
-    
-    Why this is useful:
-    - Helps with transparency, moderation, or audit trails.
-    - Prevents users from changing what they said without leaving a trace.
+    conversation_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)  # Set only once when created
+    updated_at = models.DateTimeField(auto_now=True)      # Updates every time the model is saved
+
+    participants = models.ManyToManyField(
+        to=User,
+        related_name='conversations'
+    )  # Users involved in this conversation
+
+    def __str__(self):
+        """
+        Returns a readable name for admin or debugging.
+        """
+        participant_names = ', '.join(user.username for user in self.participants.all())
+        return f"Conversation {self.conversation_id} with {participant_names}"
+
+class Message(models.Model):
     """
-    
-    # Check if the message instance has a primary key (i.e., already exists in the database).
-    #We can use teh service layer of just bypass it 
+    Represents a message sent within a conversation.
+    Supports threading, edit tracking, and read status.
     """
-    if instance.pk:
-        try:
-            # Retrieve the version of the message from before this save operation.
-            old_message = Message.objects.get(pk=instance.pk)
+    message_id = models.UUIDField(
+        primary_key=True,
+        editable=False,
+        default=uuid.uuid4
+    )
 
-            # Compare the old content with the current one.
-            if old_message.message_content != instance.message_content:
-                # If different, log the old content in message history.
-                LogMessageHistoryService.log_edits(instance, old_message.message_content)
+    conversation = models.ForeignKey(
+        to=Conversation,
+        on_delete=models.CASCADE,
+        related_name='messages'
+    )  # Link to which conversation this message belongs
 
-                # Mark the current message as edited.
-                instance.edited = True
-                # Save the updated 'edited' flag to the database.
-                instance.save(update_fields=["edited"])
+    sender = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        related_name='sent_messages'
+    )  # Who sent the message
 
-        except Message.DoesNotExist:
-            # This could happen if the message was just created and not found in DB yet.
-            # In that case, we do nothing.
-            pass
+    receiver = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        related_name='received_messages',
+        help_text="The user who receives this message."
+    )  # Who receives the message
+
+    sent_at = models.DateTimeField(
+        default=timezone.now,
+        db_index=True  # Speeds up queries sorting by timestamp
+    )  # When the message was sent
+
+    message_content = models.TextField(
+        max_length=5000,
+        help_text="The body/content of the message"
+    )  # The actual text content of the message
+
+    read = models.BooleanField(
+        default=False,
+        help_text="Whether the recipient has read the message"
+    )  # Whether the recipient(s) have read the message
+
+    edited = models.BooleanField(
+        default=False,
+        help_text="Whether the message was edited by the sender"
+    )  # Tracks whether the message has been edited
+
+    parent_message = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='replies',
+        help_text="Link to the original message if this is a reply"
+    )  # Supports replying to messages
+
+    objects = MessageQuerySet.as_manager()  # Custom queryset
+    unread = UnreadMessagesManager()        # Custom manager for unread messages
+
+    class Meta:
+        ordering = ['sent_at']  # Newer messages appear after older ones
+        indexes = [
+            models.Index(fields=['sender', 'receiver', 'sent_at']),
+        ]
+
+    def __str__(self) -> str:
+        """
+        Display message sender and timestamp in admin/debug views.
+        """
+        return f"Message from {self.sender.username} to {self.receiver.username} at {self.sent_at}"
+
+class MessageHistory(models.Model):
+    """Stores historical versions of edited messages."""
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name='message_history'
+    )
+    old_content = models.TextField(max_length=250)
+    edited_at = models.DateTimeField(default=timezone.now, db_index=True)
+    edited_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        ordering = ['-edited_at']
+        indexes = [models.Index(fields=['message', 'edited_at'])]
+
+class Notification(models.Model):
     """
-    if instance.pk:
-        try:
-            old_message = Message.objects.get(pk = instance.pk)
-            if old_message.message_content != instance.message_content:
-                MessageHistory.objects.create(
-                    message = instance,
-                    old_content = old_message.message_content, 
-                    edited_by = instance.sender
-                )
-                instance.edited = True
-                instance.save(update_fields=["edited"])
-        except Message.DoesNotExist:
-            # This could happen if the message was just created and not found in DB yet.
-            # In that case, we do nothing.
-            pass 
-
-##For this, we can also use a service layer or bypass it. 
-
-#Option 1 for using service layer
-""" 
-@receiver(post_delete, sender = User)       
-def handle_user_deletion(sender, instance, **kwargs):
-    try:
-        UserCleanUpService.clean_user_data(instance)
-    except Exception:
-        pass
-"""
-## Option 2, by-passing it
-
-@receiver(post_delete, sender=User)
-def delete_user_data(sender, instance, **kwargs):
+    Stores notifications for users about new messages.
     """
-    Deletes all related data when a User is removed:
-    - Messages sent or received by the user
-    - Notifications addressed to the user
-    - Message history entries for messages sent by the user
-    - Message history entries edited by the user
-    """
-    try:
-        # Delete messages where the user is the sender
-        Message.objects.filter(sender=instance).delete()
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='user_notifications'
+    )
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE
+    )
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        db_index=True
+    )
+    is_message_read = models.BooleanField(
+        default=False,
+        help_text="Whether the user has viewed this notification"
+    )
 
-        # Delete messages where the user is the receiver
-        Message.objects.filter(receiver=instance).delete()
-
-        # Delete notifications related to the user
-        Notification.objects.filter(user=instance).delete()
-
-        # Delete message history where the message was sent by the user
-        MessageHistory.objects.filter(message__sender=instance).delete()
-
-        # Delete message history entries that were edited by the user
-        MessageHistory.objects.filter(edited_by=instance).delete()
-    except Exception:
-        pass
-
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+        ]
