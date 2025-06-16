@@ -103,7 +103,6 @@ REST_FRAMEWORK = {
       ],
       'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
       'PAGE_SIZE': 20,  # 20 messages per page globally
-      'EXCEPTION_HANDLER': 'chats.exceptions.custom_exception_handler',
 }
 
 LANGUAGE_CODE = 'en-us'
@@ -137,3 +136,9 @@ CORS_ALLOW_CREDENTIALS = True  # Allow credentials (like tokens)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
