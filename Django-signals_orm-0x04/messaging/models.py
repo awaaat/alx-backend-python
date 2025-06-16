@@ -43,8 +43,9 @@ class Message(models.Model):
     message_id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
-    sent_at = models.DateTimeField(default=timezone.now, db_index=True)
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
     message_body = models.TextField(max_length=5000, help_text="The body/content of the message")
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
     read = models.BooleanField(default=False, help_text="Whether the recipients have read the message")
     edited = models.BooleanField(default=False, help_text="Whether the message was edited by the sender")
     parent_message = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies', help_text="Link to the original message if this is a reply")
@@ -53,11 +54,11 @@ class Message(models.Model):
     unread = UnreadMessagesManager()
 
     class Meta:
-        ordering = ['sent_at']
-        indexes = [models.Index(fields=['sender', 'conversation', 'sent_at'])]
+        ordering = ['timestamp']
+        indexes = [models.Index(fields=['sender', 'receiver', 'conversation', 'timestamp'])]
 
     def __str__(self):
-        return f"Message from {self.sender.username} at {self.sent_at}"
+        return f"Message from {self.sender.username} at {self.timestamp}"
 
 class MessageHistory(models.Model):
     message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='histories')
