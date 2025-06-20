@@ -4,14 +4,14 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework_simplejwt.views import TokenRefreshView
-from chats.auth import CustomTokenObtainPairView
-from chats.views import UserViewSet, get_me
+from messaging.auth import CustomTokenObtainPairView
+from messaging.views import UserViewSet, get_me
 from django.conf import settings
 from django.conf.urls.static import static
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="ALX Messaging App API",
+        title="Messaging App API",
         default_version='v1',
         description="Detailed API documentation for internal and external use.",
         terms_of_service="https://www.example.com/terms/",
@@ -29,13 +29,13 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     # Chat app endpoints
-    path('api/chats/', include('chats.urls')),
-    # DRF login/logout UI
+    path('api/chats/', include('messaging.urls')),
+    #DRF login/logout UI
     path('api-auth/', include('rest_framework.urls')),
     # JWT Authentication
     path('api/token/', CustomTokenObtainPairView.as_view(), name='obtain-token'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
-    # User endpoints
+    #User endpoints
     path('api/users/me/', get_me, name='user-me'),
     path('api/users/', UserViewSet.as_view({'get': 'list'}), name='user-list'),  # Changed 'user' to 'users'
 ]
