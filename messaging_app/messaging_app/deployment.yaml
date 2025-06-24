@@ -1,0 +1,62 @@
+# ========================
+# DEPLOYMENT CONFIGURATION
+# ========================
+
+apiVersion: apps/v1            # API version for Deployments in Kubernetes
+kind: Deployment               # We are defining a Deployment (not just a Pod or Service)
+
+metadata:
+  name: django-app             # The name of this Deployment (must be unique in its namespace)
+  namespace: default           # Namespace is like a folder. "default" is the default namespace.
+
+spec:
+  replicas: 1                  # How many copies (Pods) of the Django app to run
+
+  selector:                    # This tells the Deployment how to find the Pods it manages
+    matchLabels:
+      app: django              # Must MATCH the labels in the Pod template below
+
+  template:                    # Template for the Pods that will be created
+    metadata:
+      labels:
+        app: django            # Must MATCH the selector above, or Kubernetes won't connect them
+
+    spec:
+      containers:
+      - name: django           # Name of the container inside the Pod
+        image: my-django-app:1.0  # Docker image to use (you must build/tag this locally or push it to a registry)
+
+        ports:
+        - containerPort: 8000  # Django typically runs on port 8000 (inside the container)
+
+        # Optional: livenessProbe tells Kubernetes how to check if the app is "alive"
+        livenessProbe:
+          httpGet:
+            path: /health      # This must be a real route in your Django app (you define /health in urls.py/views.py)
+            port: 8000
+          initialDelaySeconds: 15  # Wait 15 seconds after startup before checking
+          periodSeconds: 10       # Check every 10 seconds
+
+---
+
+# ========================
+# SERVICE CONFIGURATION
+# ========================
+
+apiVersion: v1
+kind: Service                   # This defines a way to access the Django app Pods
+
+metadata:
+  name: django-service          # Name of the Service
+  namespace: default            # Must match the Deployment's namespace ("default")
+
+spec:
+  selector:
+    app: django                 # Must MATCH the Pod labels so the service knows where to send traffic
+
+  ports:
+  - protocol: TCP               # Standard protocol
+    port: 80                    # Port to expose INSIDE the cluster (what other Pods would use to access Django)
+    targetPort: 8000            # This forwards to the container's internal port (must match containerPort above)
+
+  type: ClusterIP               # Exposes this service only inside the cluster (not from outside the machine)
