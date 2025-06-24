@@ -14,7 +14,7 @@ SECRET_KEY = env("SECRET_KEY", default='django-insecure-j=&t1t8$$8jc-6-tg1z2!axx
 
 DEBUG = env.bool("DEBUG", default=True)  # type: ignore
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']  # Add localhost for development
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0'] # Add localhost for development
 
 # Application definition
 INSTALLED_APPS = [
