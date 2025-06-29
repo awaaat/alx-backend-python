@@ -1,5 +1,5 @@
 import logging
-import aiosqlite
+import aiosqlite # type: ignore
 import asyncio
 from typing import List, Tuple, Any
 

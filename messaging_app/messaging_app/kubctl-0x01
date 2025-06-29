@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# -------------------------------
+# Tutorial: Scale a Django App in Kubernetes,
+# Load Test It, and Monitor Resource Usage
+# -------------------------------
+
+# Step 1: SCALE THE APP
+# We are using 'kubectl scale' to tell Kubernetes
+# to increase the number of Pods (replicas) for our Django app.
+# More replicas = better ability to handle traffic.
+
+echo "[INFO] Scaling Django app to 3 replicas..."
+kubectl scale deployment django-app --replicas=3
+
+# Alternative:
+# You can also edit the deployment manually with:
+# kubectl edit deployment django-app
+# Or apply a YAML file with replicas set to 3.
+
+# ------------------------------------------------------------
+
+# Step 2: VERIFY THAT THE PODS ARE RUNNING
+# This will show you all Pods and their statuses (Running, Pending, etc.).
+# Useful for checking that the scaling worked.
+
+echo "[INFO] Listing running pods..."
+kubectl get pods
+
+# Add '-w' to watch them live:
+# kubectl get pods -w
+
+# ------------------------------------------------------------
+
+# Step 3: LOAD TEST THE APP
+# To do that, we need to know the external URL of the service.
+# Minikube provides a simple way to get that URL.
+
+echo "[INFO] Getting Django service URL..."
+# This writes the service URL to a temporary file
+minikube service django-service --url > service_url.txt
+
+# Then we read that URL into a shell variable
+SERVICE_URL=$(cat service_url.txt)
+
+# Now we use 'wrk' to simulate traffic:
+# -t2  = use 2 threads
+# -c100 = simulate 100 users (concurrent connections)
+# -d30s = run the test for 30 seconds
+echo "[INFO] Running load test on: $SERVICE_URL"
+wrk -t2 -c100 -d30s "$SERVICE_URL"
+
+# Alternatives to wrk:
+# - ab (ApacheBench): simple, old-school
+# - locust: browser-based UI, scriptable behavior
+# - k6: modern, CI-ready
+
+# ------------------------------------------------------------
+
+# Step 4: MONITOR RESOURCE USAGE
+# This shows how much CPU and memory each Pod is using.
+# Useful for finding performance bottlenecks or overloaded Pods.
+
+echo "[INFO] Checking resource usage for all Pods..."
+kubectl top pods
+
+# Alternative:
+# kubectl top node   # For full-node resource usage
+# kubectl describe pod <pod-name>  # For deep troubleshooting
+
+# ------------------------------------------------------------
+# Done! You've scaled the app, tested it under load,
+# and checked that it’s not melting down under pressure 😅
+# ------------------------------------------------------------
+
+# Optional Cleanup:
+# To scale back down to 1 Pod after testing, run:
+# kubectl scale deployment django-app --replicas=1
