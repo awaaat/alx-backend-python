@@ -1,55 +1,55 @@
 pipeline {
     agent any
     environment {
-    PYTHON_VERSION = '3.12'
-    VENV = 'venv'
+        PYTHON_VERSION = '3.10'
+        VENV = 'venv'
     }
     stages {
         stage('Checkout') {
-        steps {
-            git branch: 'main',
-                credentialsId: 'github-credentials',
-                url: 'https://github.com/awaaat/alx-backend-python'
-    }
-    }
+            steps {
+                git branch: 'main',
+                    credentialsId: 'github-credentials',
+                    url: 'https://github.com/awaaat/alx-backend-python'
+            }
+        }
 
-    stage('Set Up Environment') {
-    steps {
-        sh '''
-        apt-get update && apt-get install -y python3 python3-venv python3-pip
-        
-        python${PYTHON_VERSION} -m venv ${VENV}
-        . ${VENV}/bin/activate
-        pip install --upgrade pip
-        pip install -r messaging_app/requirements.txt
-        pip install pytest pytest-django
-        '''
-    }
-    }
+        stage('Set Up Environment') {
+            steps {
+                sh '''
+                apt-get update && apt-get install -y python3 python3-venv python3-pip
 
-    stage('Run Tests') {
-    steps {
-        sh '''
-        . ${VENV}/bin/activate
-        cd messaging_app
-        mkdir -p reports
-        pytest --junitxml=reports/test-report.xml
-        '''
-    }
-    }
+                python${PYTHON_VERSION} -m venv ${VENV}
+                . ${VENV}/bin/activate
+                pip3 install --upgrade pip
+                pip3 install -r messaging_app/requirements.txt
+                pip3 install pytest pytest-django
+                '''
+            }
+        }
 
-    stage('Archive Reports') {
-    steps {
-        archiveArtifacts artifacts: 'messaging_app/reports/test-report.xml', allowEmptyArchive: true
+        stage('Run Tests') {
+            steps {
+                sh '''
+                . ${VENV}/bin/activate
+                cd messaging_app
+                mkdir -p reports
+                pytest --junitxml=reports/test-report.xml
+                '''
+            }
+        }
+
+        stage('Archive Reports') {
+            steps {
+                archiveArtifacts artifacts: 'messaging_app/reports/test-report.xml', allowEmptyArchive: true
+            }
+        }
     }
+    post {
+        always {
+            junit 'messaging_app/reports/test-report.xml'
+        }
+        failure {
+            echo 'Build failed! Check test reports.'
+        }
     }
-}
-post {
-    always {
-    junit 'messaging_app/reports/test-report.xml'
-    }
-    failure {
-    echo 'Build failed! Check test reports.'
-    }
-}
 }
