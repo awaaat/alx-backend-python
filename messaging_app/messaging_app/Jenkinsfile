@@ -1,7 +1,6 @@
 pipeline {
     agent any
     environment {
-        PYTHON_VERSION = '3.10'
         VENV = 'venv'
     }
     stages {
@@ -18,7 +17,7 @@ pipeline {
                 sh '''
                 apt-get update && apt-get install -y python3 python3-venv python3-pip
 
-                python${PYTHON_VERSION} -m venv ${VENV}
+                python3 -m venv ${VENV}
                 . ${VENV}/bin/activate
                 pip3 install --upgrade pip
                 pip3 install -r messaging_app/requirements.txt
