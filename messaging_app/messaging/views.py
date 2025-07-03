@@ -1,21 +1,29 @@
+import logging
+from typing import Optional
+
+from django.db.models import QuerySet
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+
 from rest_framework import viewsets, filters, status, serializers
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework_extensions.cache.decorators import cache_response
-from typing import Optional
-from django.db.models import QuerySet
-from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
+
 from .models import ChatUser, Message, Conversation
 from .serializers import UserSerializer, MessageSerializer, ConversationSerializer
 from .permissions import IsParticipantOfConversation
 from .filters import MessageFilter
 from .pagination import CustomPagination
-import logging
+
 
 logger = logging.getLogger(__name__)
+
+def health_check(request):
+    return JsonResponse({"status": "healthy"}, status=200)
 
 class ConversationViewSet(viewsets.ModelViewSet):
     queryset = Conversation.objects.all().prefetch_related('participants')
