@@ -1,68 +1,59 @@
-// Define the pipeline structure
 pipeline {
-    // Allow the pipeline to run on any available agent
     agent any
-
-    // Define environment variables available to all stages
     environment {
-        // Virtual environment directory name
         VENV = 'venv'
-        // GitHub credentials ID configured in Jenkins
         GITHUB_CREDENTIALS = credentials('github-credentials')
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials') // Add Docker Hub credentials
+        IMAGE_NAME = 'awaaat/messaging_app'
+        IMAGE_TAG = 'latest'
     }
-
-    // Define the stages of the pipeline
     stages {
-        // Stage 1: Checkout code from GitHub
         stage('Checkout') {
             steps {
-                // Use Git SCM to pull code from the specified repository
                 git branch: 'main',
                     credentialsId: 'github-credentials',
-                    url: 'https://github.com/alx-backend-python.git'
+                    url: 'https://github.com/awaaat/alx-backend-python'
             }
         }
-
-        // Stage 2: Set up Python virtual environment and install dependencies
         stage('Setup Environment') {
             steps {
-                // Create and activate virtual environment, install dependencies
                 sh '''
-                    # Create a Python virtual environment
                     python3 -m venv ${VENV}
-                    # Activate the virtual environment
                     . ${VENV}/bin/activate
-                    # Upgrade pip to the latest version
                     pip3 install --upgrade pip
-                    # Install project dependencies from requirements.txt
                     pip3 install -r messaging_app/requirements.txt
-                    # Install testing dependencies
                     pip3 install pytest pytest-django pytest-cov
                 '''
             }
         }
-
-        // Stage 3: Run tests using pytest
         stage('Run Tests') {
             steps {
-                // Activate virtual environment and run pytest with coverage
                 sh '''
                     . ${VENV}/bin/activate
-                    # Change to messaging_app directory where tests are located
                     cd messaging_app
-                    # Run pytest with JUnit XML output and coverage report
                     python -m pytest --junitxml=reports/test-report.xml --cov=. --cov-report=xml --cov-report=html
                 '''
             }
         }
-
-        // Stage 4: Archive test reports and coverage
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "./messaging_app")
+                }
+            }
+        }
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
+                        docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
+                    }
+                }
+            }
+        }
         stage('Archive Reports') {
             steps {
-                // Archive test reports and coverage files
                 archiveArtifacts artifacts: 'messaging_app/reports/**', allowEmptyArchive: true
-                
-                // Publish HTML coverage report
                 publishHTML([
                     allowMissing: false,
                     alwaysLinkToLastBuild: true,
@@ -74,18 +65,13 @@ pipeline {
             }
         }
     }
-
-    // Post-build actions
     post {
-        // Clean up the workspace after the build
         always {
             cleanWs()
         }
-        // Notify on build success
         success {
-            echo 'Build and tests completed successfully!'
+            echo 'Build, tests, and Docker push completed successfully!'
         }
-        // Notify on build failure
         failure {
             echo 'Build failed! Check the logs for details.'
         }

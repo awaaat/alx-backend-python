@@ -1,13 +1,14 @@
 #!/bin/bash
 
-echo "Scaling the app to 3 replicas....."
+
+echo "Scaling the app to 3 replicas...."
 kubectl scale deployment django-app --replicas=3
+
 if [ $? -ne 0 ]; then
-    echo "❌ Failed to scale deployment. Exiting."
+    echo "Failed to scale deployment. Exiting.. "
     exit 1
 fi
-
-echo "✅ Listing all current pods..."
+echo "Listing all current pods..."
 kubectl get pods
 
 # Check if wrk is installed
@@ -24,21 +25,21 @@ if ! command -v wrk > /dev/null; then
     cd -
     
     if ! command -v wrk > /dev/null; then
-        echo "❌ Failed to install wrk. Exiting ..."
+        echo "Failed to install wrk. Exiting ..."
         exit 1
     fi
 fi
 
-echo "🌐 Getting service URL from Minikube..."
+echo "Getting service URL from Minikube..."
 SERVICE_IP=$(minikube service django-service --url)
 
 if [ -z "$SERVICE_IP" ]; then
-    echo "❌ Failed to retrieve service IP. Exiting..."
+    echo "Failed to retrieve service IP. Exiting..."
     exit 1
 fi
 
-echo "🚀 Running load testing with wrk..."
+echo " Running load testing with wrk..."
 wrk -t2 -c100 -d30s "$SERVICE_IP"
 
-echo "📊 Checking Resource Usage..."
-kubectl top pods
+echo "Checking Resource Usage..."
+kubectl top pods --all-namespaces
