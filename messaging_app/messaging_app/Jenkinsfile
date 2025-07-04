@@ -1,33 +1,20 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.9'
-            args '-u root' // Run as root to avoid permission issues
-        }
-    }
+    agent any
     environment {
-        VENV = 'venv' // Not used now but keeping it in case you want to restore virtualenv later
+        VENV = 'venv'
     }
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    credentialsId: 'github-credentials',
-                    url: 'https://github.com/awaaat/alx-backend-python'
-            }
-        }
-
         stage('Debug Environment') {
             steps {
                 sh '''
-                echo "Working directory:"
-                pwd
-                echo "Directory contents:"
-                ls -la
-                echo "Messaging app contents:"
-                ls -la messaging_app/
-                python3 --version
-                pip3 --version
+                    echo "Working directory:"
+                    pwd
+                    echo "Directory contents:"
+                    ls -la
+                    echo "Messaging app contents:"
+                    ls -la messaging_app/ || echo "messaging_app directory not found"
+                    python3 --version
+                    pip3 --version
                 '''
             }
         }
@@ -35,9 +22,9 @@ pipeline {
         stage('Set Up Environment') {
             steps {
                 sh '''
-                pip3 install --upgrade pip
-                pip3 install -r messaging_app/requirements.txt
-                pip3 install pytest pytest-django
+                    python3 -m pip install --upgrade pip
+                    python3 -m pip install -r messaging_app/requirements.txt
+                    python3 -m pip install pytest pytest-django
                 '''
             }
         }
@@ -45,9 +32,9 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                cd messaging_app
-                mkdir -p reports
-                pytest --junitxml=reports/test-report.xml
+                    mkdir -p messaging_app/reports
+                    cd messaging_app
+                    python3 -m pytest --junitxml=reports/test-report.xml
                 '''
             }
         }
@@ -61,7 +48,9 @@ pipeline {
 
     post {
         always {
-            junit testResults: 'messaging_app/reports/test-report.xml', skipPublishingChecks: true
+            node('') {
+                junit testResults: 'messaging_app/reports/test-report.xml', skipPublishingChecks: true
+            }
         }
         failure {
             echo 'Build failed! Check test reports.'
