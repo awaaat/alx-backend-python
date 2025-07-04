@@ -2,7 +2,6 @@ pipeline {
     agent none // Define agent per stage
     environment {
         VENV = 'venv'
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials') // Docker Hub credentials ID
         GITHUB_CREDENTIALS = credentials('github-credentials') // GitHub credentials ID
     }
     stages {
