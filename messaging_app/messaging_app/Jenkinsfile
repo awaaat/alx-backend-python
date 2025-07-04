@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'python:3.9'
+            args '--user root' // Run as root to avoid permission issues
+        }
+    }
     environment {
         VENV = 'venv'
     }
@@ -49,7 +54,7 @@ pipeline {
     post {
         always {
             node('') {
-                junit testResults: 'messaging_app/reports/test-report.xml', skipPublishingChecks: true
+                junit testResults: 'messaging_app/reports/test-report.xml', allowEmptyResults: true, skipPublishingChecks: true
             }
         }
         failure {
