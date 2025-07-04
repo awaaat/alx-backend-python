@@ -1,14 +1,12 @@
 #!/bin/bash
 if ! command -v minikube &> /dev/null; then
-    echo "Minikube not found. Installing minikube ......."
-    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-    sudo install minikube-linux-amd64 /usr/local/bin/minikube
+    echo "Minikube not installed."
 fi
 
-echo "Starting Minikube Cluster....."
+echo "Starting minikube cluster..."
 minikube start --driver=docker
 
-echo "Checking Cluster Status....."
+echo "Checking Cluster Status...."
 kubectl cluster-info
 
 echo "Listing all pods in the cluster...."
