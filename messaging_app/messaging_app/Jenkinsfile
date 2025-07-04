@@ -1,5 +1,5 @@
 pipeline {
-    agent any
+    agent { docker { image 'python:3.9' } }
     environment {
         VENV = 'venv'
         GITHUB_CREDENTIALS = credentials('github-credentials')
