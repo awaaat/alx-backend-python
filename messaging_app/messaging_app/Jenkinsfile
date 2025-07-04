@@ -33,11 +33,11 @@ pipeline {
                     # Activate the virtual environment
                     . ${VENV}/bin/activate
                     # Upgrade pip to the latest version
-                    pip install --upgrade pip
+                    pip3 install --upgrade pip
                     # Install project dependencies from requirements.txt
-                    pip install -r messaging_app/requirements.txt
+                    pip3 install -r messaging_app/requirements.txt
                     # Install testing dependencies
-                    pip install pytest pytest-django pytest-cov
+                    pip3 install pytest pytest-django pytest-cov
                 '''
             }
         }
