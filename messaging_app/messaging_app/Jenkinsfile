@@ -6,7 +6,7 @@ pipeline {
         }
     }
     environment {
-        VENV = 'venv'
+        VENV = 'venv' // Not used now but keeping it in case you want to restore virtualenv later
     }
     stages {
         stage('Checkout') {
@@ -16,44 +16,49 @@ pipeline {
                     url: 'https://github.com/awaaat/alx-backend-python'
             }
         }
+
         stage('Debug Environment') {
             steps {
                 sh '''
+                echo "Working directory:"
                 pwd
+                echo "Directory contents:"
                 ls -la
+                echo "Messaging app contents:"
                 ls -la messaging_app/
                 python3 --version
                 pip3 --version
                 '''
             }
         }
+
         stage('Set Up Environment') {
             steps {
                 sh '''
-                python3 -m venv ${VENV}
-                . ${VENV}/bin/activate
                 pip3 install --upgrade pip
                 pip3 install -r messaging_app/requirements.txt
                 pip3 install pytest pytest-django
                 '''
             }
         }
+
         stage('Run Tests') {
             steps {
                 sh '''
-                . ${VENV}/bin/activate
                 cd messaging_app
                 mkdir -p reports
                 pytest --junitxml=reports/test-report.xml
                 '''
             }
         }
+
         stage('Archive Reports') {
             steps {
                 archiveArtifacts artifacts: 'messaging_app/reports/test-report.xml', allowEmptyArchive: true
             }
         }
     }
+
     post {
         always {
             junit testResults: 'messaging_app/reports/test-report.xml', skipPublishingChecks: true
