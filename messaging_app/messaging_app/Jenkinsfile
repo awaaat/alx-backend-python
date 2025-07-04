@@ -1,5 +1,10 @@
 pipeline {
-    agent { docker { image 'docker:20.10-dind' args '--privileged' } }
+    agent {
+        docker {
+            image 'docker:20.10-dind'
+            args '--privileged'
+        }
+    }
     environment {
         VENV = 'venv'
         GITHUB_CREDENTIALS = credentials('github-credentials')
