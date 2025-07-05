@@ -1,6 +1,7 @@
 from pathlib import Path
 import environ  # type: ignore
 from datetime import timedelta
+from urllib.parse import urlparse
 
 # Initialize environment variables
 env = environ.Env()
@@ -14,7 +15,7 @@ SECRET_KEY = env("SECRET_KEY", default='django-insecure-j=&t1t8$$8jc-6-tg1z2!axx
 
 DEBUG = env.bool("DEBUG", default=True)  # type: ignore
 
-ALLOWED_HOSTS = ['10.244.0.6', 'localhost', '127.0.0.1', '*']  # '*' for testing, not production# Add localhost for development
+ALLOWED_HOSTS = ['10.244.0.6', 'localhost', '127.0.0.1', '*']  # '*' for testing, not production
 
 # Application definition
 INSTALLED_APPS = [
@@ -31,7 +32,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
-    ]
+]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Must be at the top
@@ -42,10 +43,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    ]
+]
 
 ROOT_URLCONF = 'messaging_app.urls'
 AUTH_USER_MODEL = 'messaging.ChatUser'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -63,16 +65,30 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'messaging_app.wsgi.application'
 
-# PostgreSQL Database Configuration from .env
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env("DB_NAME"),
-        'USER': env("DB_USER"),
-        'PASSWORD': env("DB_PASSWORD"),
-        'HOST': env("DB_HOST"),
-        'PORT': env("DB_PORT"),
+# Database Configuration (PostgreSQL primary, MySQL edge case)
+DATABASE_URL = env('DATABASE_URL')
+if DATABASE_URL:
+    url = urlparse(DATABASE_URL) # type: ignore
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql' if url.scheme.startswith('postgres') else 'django.db.backends.mysql',
+            'NAME': url.path[1:],
+            'USER': url.username,
+            'PASSWORD': url.password,
+            'HOST': url.hostname,
+            'PORT': url.port,
+        }
     }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': env("DB_NAME"),
+            'USER': env("DB_USER"),
+            'PASSWORD': env("DB_PASSWORD"),
+            'HOST': env("DB_HOST"),
+            'PORT': env("DB_PORT"),
+        }
     }
 
 # Password validation
@@ -123,7 +139,6 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
@@ -138,6 +153,7 @@ CORS_ALLOW_CREDENTIALS = True  # Allow credentials (like tokens)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
