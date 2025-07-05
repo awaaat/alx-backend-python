@@ -66,21 +66,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'messaging_app.wsgi.application'
 
 # Database Configuration (PostgreSQL primary, MySQL edge case)
-DATABASE_URL = env('DATABASE_URL')
-if DATABASE_URL:
-    url = urlparse(DATABASE_URL) # type: ignore
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql' if url.scheme.startswith('postgres') else 'django.db.backends.mysql',
-            'NAME': url.path[1:],
-            'USER': url.username,
-            'PASSWORD': url.password,
-            'HOST': url.hostname,
-            'PORT': url.port,
-        }
-    }
-else:
-    DATABASES = {
+DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': env("DB_NAME"),
