@@ -1,0 +1,237 @@
+# Secret for PostgreSQL and Django credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-credentials
+  namespace: default
+type: Opaque
+stringData:
+  SECRET_KEY: django-insecure-h4*v2n2idyi=t874c7l0piv1o*n@6zg7s+!!qwv@$kh6t$x0*5
+  DB_NAME: messaging_app
+  DB_USER: allan
+  DB_PASSWORD: Allan20252025
+
+---
+
+# PersistentVolumeClaim for PostgreSQL
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
+# PostgreSQL Deployment (Green)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-green
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+      version: green
+  template:
+    metadata:
+      labels:
+        app: postgres
+        version: green
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5432"
+    spec:
+      securityContext:
+        fsGroup: 999  # Ensure Postgres can write to volume
+      containers:
+      - name: postgres
+        image: postgres:17
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_NAME
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "allan", "-d", "messaging_app"]
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 10
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "allan", "-d", "messaging_app"]
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 10
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+
+---
+
+# PostgreSQL Service (Green)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service-green
+  namespace: default
+spec:
+  selector:
+    app: postgres
+    version: green
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+
+---
+
+# Django Deployment (Green)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-app-green
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: django
+      version: green
+  template:
+    metadata:
+      labels:
+        app: django
+        version: green
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:17
+        command: ["sh", "-c", "for i in {1..60}; do pg_isready -h postgres-service-green -p 5432 -U allan -d messaging_app && exit 0; echo 'waiting for postgres'; sleep 2; done; echo 'timeout waiting for postgres'; exit 1"]
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_PASSWORD
+      containers:
+      - name: django
+        image: messaging_app:latest
+        imagePullPolicy: IfNotPresent
+        command: ["sh", "-c", "python /messaging_app/manage.py migrate && gunicorn --bind 0.0.0.0:8000 messaging_app.wsgi"]
+        ports:
+        - containerPort: 8000
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: SECRET_KEY
+        - name: DEBUG
+          value: "True"
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_PASSWORD
+        - name: DB_HOST
+          value: postgres-service-green.default.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: PYTHONPATH
+          value: "/messaging_app"
+        - name: DJANGO_SETTINGS_MODULE
+          value: "messaging_app.settings"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          failureThreshold: 10
+
+---
+
+# Django Service (Green)
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-service-green
+  namespace: default
+spec:
+  selector:
+    app: django
+    version: green
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+  type: ClusterIP

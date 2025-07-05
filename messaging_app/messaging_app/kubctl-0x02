@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Deploy blue and green deployments to the Kubernetes cluster
+echo "Deploying blue and green versions..."
+kubectl apply -f blue_deployment.yaml
+if [ $? -ne 0 ]; then
+    echo "Failed to apply blue_deployment.yaml. Exiting."
+    exit 1
+fi
+kubectl apply -f green_deployment.yaml
+if [ $? -ne 0 ]; then
+    echo "Failed to apply green_deployment.yaml. Exiting."
+    exit 1
+fi
+
+# Verify green deployment pods are running and healthy
+echo "Checking green deployment status..."
+kubectl get pods -l app=django,version=green --no-headers | grep -q "Running"
+if [ $? -ne 0 ]; then
+    echo "Green deployment pods are not running. Exiting."
+    exit 1
+fi
+
+# Check logs of green deployment for errors
+echo "Checking logs for green deployment..."
+kubectl logs -l app=django,version=green --all-containers
+if [ $? -ne 0 ]; then
+    echo "Failed to retrieve green deployment logs. Exiting."
+    exit 1
+fi
+
+# Patch the service to switch traffic to green deployment
+echo "Switching service to green deployment..."
+kubectl patch service django-service -p '{"spec":{"selector":{"app":"django","version":"green"}}}'
+if [ $? -ne 0 ]; then
+    echo "Failed to patch service to green. Exiting."
+    exit 1
+fi
+
+echo "Traffic switched to green deployment successfully."

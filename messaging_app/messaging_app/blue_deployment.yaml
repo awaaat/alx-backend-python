@@ -1,0 +1,245 @@
+# Secret for PostgreSQL and Django credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  # Name of the secret storing sensitive data
+  name: app-credentials
+  # Namespace for resource isolation
+  namespace: default
+type: Opaque
+stringData:
+  SECRET_KEY: django-insecure-h4*v2n2idyi=t874c7l0piv1o*n@6zg7s+!!qwv@$kh6t$x0*5
+  DB_NAME: messaging_app
+  DB_USER: allan
+  DB_PASSWORD: Allan20252025
+
+---
+
+# PersistentVolumeClaim for PostgreSQL storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  # Name of the PVC for persistent data
+  name: postgres-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
+# PostgreSQL Deployment for the blue environment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Deployment name for PostgreSQL (blue)
+  name: postgres-blue
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: postgres
+        version: blue
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5432"
+    spec:
+      securityContext:
+        fsGroup: 999  # Allows Postgres to write to the volume
+      containers:
+      - name: postgres
+        image: postgres:17
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_NAME
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "allan", "-d", "messaging_app"]
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 10
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "allan", "-d", "messaging_app"]
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 10
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+
+---
+
+# PostgreSQL Service for the blue environment
+apiVersion: v1
+kind: Service
+metadata:
+  # Service name for PostgreSQL (blue)
+  name: postgres-service-blue
+  namespace: default
+spec:
+  selector:
+    app: postgres
+    version: blue
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+
+---
+
+# Django Deployment for the blue environment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Deployment name for Django app (blue)
+  name: django-app-blue
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: django
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: django
+        version: blue
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:17
+        command: ["sh", "-c", "for i in {1..60}; do pg_isready -h postgres-service-blue -p 5432 -U allan -d messaging_app && exit 0; echo 'waiting for postgres'; sleep 2; done; echo 'timeout waiting for postgres'; exit 1"]
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_PASSWORD
+      containers:
+      - name: django
+        # Updated to version 2.0 for rolling update
+        image: messaging_app:2.0
+        imagePullPolicy: IfNotPresent
+        command: ["sh", "-c", "python /messaging_app/manage.py migrate && gunicorn --bind 0.0.0.0:8000 messaging_app.wsgi"]
+        ports:
+        - containerPort: 8000
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: SECRET_KEY
+        - name: DEBUG
+          value: "True"
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-credentials
+              key: DB_PASSWORD
+        - name: DB_HOST
+          value: postgres-service-blue.default.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: PYTHONPATH
+          value: "/messaging_app"
+        - name: DJANGO_SETTINGS_MODULE
+          value: "messaging_app.settings"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          failureThreshold: 10
+
+---
+
+# Django Service for the blue environment
+apiVersion: v1
+kind: Service
+metadata:
+  # Service name for Django app (blue)
+  name: django-service-blue
+  namespace: default
+spec:
+  selector:
+    app: django
+    version: blue
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+  type: ClusterIP

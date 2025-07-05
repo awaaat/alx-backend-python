@@ -1,0 +1,104 @@
+#!/bin/bash
+
+set -e  # Exit on any error
+
+APP_NAME="django-app-blue"  # Matches deployment name in blue_deployment.yaml
+IMAGE_NAME="messaging_app:2.0"  # Matches image in blue_deployment.yaml
+INGRESS_NAME="messaging-app-ingress"
+HOST_NAME="messaging.local"
+DEPLOYMENT_YAML="messaging_app/blue_deployment.yaml"
+INGRESS_YAML="messaging_app/ingress.yaml"
+DOCKERFILE="messaging_app/Dockerfile"
+
+# Check for required files
+for file in "$DEPLOYMENT_YAML" "$INGRESS_YAML" "$DOCKERFILE"; do
+  if [[ ! -f "$file" ]]; then
+    echo "❌ File $file not found"
+    exit 1
+  fi
+done
+
+
+# Restart Docker service to ensure clean state
+echo "🔄 Restarting Docker service..."
+sudo systemctl restart docker || { echo "❌ Failed to restart Docker"; exit 1; }
+sudo systemctl is-active --quiet docker || { echo "❌ Docker service is not running"; exit 1; }
+echo "✅ Docker service restarted"
+
+# Clean up old Minikube cluster
+echo "🧹 Deleting old Minikube cluster..."
+minikube delete || true
+
+# Start Minikube with Docker driver
+echo "🚀 Starting Minikube with Docker driver..."
+minikube start --driver=docker || { echo "❌ Failed to start Minikube"; exit 1; }
+
+# Verify Minikube is running
+minikube status >/dev/null || { echo "❌ Minikube is not running"; exit 1; }
+
+# Set Docker environment to Minikube's Docker daemon
+echo "🐳 Setting Docker environment to Minikube..."
+eval $(minikube docker-env) || { echo "❌ Failed to set Minikube Docker environment"; exit 1; }
+
+# Build Docker image
+echo "🐋 Building Docker image: $IMAGE_NAME ..."
+docker build -t $IMAGE_NAME -f $DOCKERFILE . || { echo "❌ Docker build failed"; exit 1; }
+
+# Verify image in host Docker daemon
+echo "🔍 Verifying image in Docker daemon..."
+docker images | grep messaging_app | grep 2.0 || { echo "❌ Image $IMAGE_NAME not found in Docker daemon"; exit 1; }
+
+# Load image into Minikube
+echo "📦 Loading image into Minikube: $IMAGE_NAME ..."
+minikube image load messaging_app 
+
+# Apply Django app deployment
+echo "🧱 Applying Django app deployment..."
+kubectl apply -f $DEPLOYMENT_YAML || { echo "❌ Failed to apply deployment"; exit 1; }
+
+# Wait for deployments to be ready (Django and PostgreSQL)
+echo "⏳ Waiting for deployments to be ready..."
+kubectl wait --for=condition=available deployment/$APP_NAME --timeout=180s || { echo "❌ Django deployment not ready"; exit 1; }
+kubectl wait --for=condition=available deployment/postgres-blue --timeout=180s || { echo "❌ PostgreSQL deployment not ready"; exit 1; }
+
+# Enable ingress addon
+echo "🌐 Enabling ingress addon..."
+minikube addons enable ingress || { echo "❌ Failed to enable ingress addon"; exit 1; }
+
+# Wait for ingress controller to be ready
+echo "⏳ Waiting for ingress controller to be ready..."
+if ! kubectl get namespace ingress-nginx &>/dev/null; then
+  echo "❌ ingress-nginx namespace not found"
+  exit 1
+fi
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=180s || { echo "❌ Ingress controller not ready"; exit 1; }
+
+# Apply ingress resource
+echo "📥 Applying ingress resource..."
+kubectl apply -f $INGRESS_YAML || { echo "❌ Failed to apply ingress"; exit 1; }
+
+# Update /etc/hosts with Minikube IP
+echo "🌍 Updating /etc/hosts with Minikube IP..."
+MINIKUBE_IP=$(minikube ip)
+if grep -q "$HOST_NAME" /etc/hosts; then
+  echo "🔁 Updating existing /etc/hosts entry..."
+  sudo sed -i "/$HOST_NAME/d" /etc/hosts
+fi
+echo "$MINIKUBE_IP $HOST_NAME" | sudo tee -a /etc/hosts > /dev/null
+
+# Test app via ingress
+echo "🧪 Testing app via ingress..."
+sleep 5
+if curl -s http://$HOST_NAME/health | grep -q "OK"; then
+  echo "✅ Application health check passed"
+else
+  echo "❌ Application health check failed"
+  kubectl describe pod -l app=django
+  kubectl logs -l app=django
+  exit 1
+fi
+
+echo "✅ Done. Visit http://$HOST_NAME"

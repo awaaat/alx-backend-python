@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Apply updated blue deployment to trigger rolling update to version 2.0
+echo "Applying rolling update for blue deployment..."
+kubectl apply -f blue_deployment.yaml
+if [ $? -ne 0 ]; then
+    echo "Failed to apply blue_deployment.yaml. Exiting."
+    exit 1
+fi
+
+# Monitor rollout progress
+echo "Monitoring rollout status..."
+kubectl rollout status deployment/django-app-blue
+if [ $? -ne 0 ]; then
+    echo "Rollout failed. Exiting."
+    exit 1
+fi
+
+# Get service URL for downtime testing
+SERVICE_URL=$(minikube service django-service --url)
+if [ -z "$SERVICE_URL" ]; then
+    echo "Failed to get service URL. Exiting."
+    exit 1
+fi
+
+# Test for downtime by continuously sending requests
+echo "Testing for downtime with curl..."
+while true; do
+    curl -s "$SERVICE_URL" > /dev/null
+    if [ $? -eq 0 ]; then
+        echo "App is up"
+    else
+        echo "App is down"
+    fi
+    sleep 1
+done &
+CURL_PID=$!
+
+# Allow 30 seconds for the rollout to complete
+sleep 30
+
+# Terminate curl loop
+kill $CURL_PID
+if [ $? -ne 0 ]; then
+    echo "Failed to terminate curl process. Continuing."
+fi
+
+# Verify updated pods are running
+echo "Verifying updated pods..."
+kubectl get pods -l app=django,version=blue --no-headers | grep -q "Running"
+if [ $? -ne 0 ]; then
+    echo "Updated pods are not running. Exiting."
+    exit 1
+fi
+kubectl get pods -l app=django,version=blue
+echo "Rolling update completed successfully."

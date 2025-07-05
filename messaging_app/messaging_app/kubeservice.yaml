@@ -1,0 +1,24 @@
+# Defines a Kubernetes Service to route traffic to Django app pods in a blue-green deployment.
+apiVersion: v1
+kind: Service
+metadata:
+  # Service name for internal cluster routing.
+  name: django-service
+  # Namespace for resource isolation.
+  namespace: default
+spec:
+  # Selector targets pods based on labels, enabling blue-green traffic switching.
+  selector:
+    # Matches pods with the app label shared by blue and green deployments.
+    app: django
+    # Initially routes to blue deployment; patch to 'version: green' for traffic switch.
+    version: blue
+  # Port configuration for service-to-pod communication.
+  ports:
+    - protocol: TCP
+      # External port for service access.
+      port: 80
+      # Maps to pod's container port where Django runs (gunicorn).
+      targetPort: 8000
+  # ClusterIP ensures internal-only access; use Ingress for external exposure.
+  type: ClusterIP
